@@ -1,0 +1,21 @@
+[package]
+name = "logging-rs"
+description = "logging-rs helps you add logging to your projects using simple macros."
+version = "1.0.0"
+authors = [
+	"ElBe-Plaq <elbe.dev.plaq@gmail.com>"
+]
+edition = "2021"
+rust-version = "1.69"
+documentation = "https://docs.rs/logging_rs/"
+readme = ".github/README.md"
+repository = "https://github.com/ElBe-Development/logging-rs/"
+license = "MIT"
+keywords = ["log", "logger", "logging", "debug", "debugging"]
+categories = [
+	"development-tools::debugging",
+]
+publish = true
+
+[dependencies]
+# chrono = "0.4.31"
