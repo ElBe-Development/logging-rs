@@ -193,6 +193,7 @@ impl Formatter {
     /// - [`Formatter`]
     /// - [`Output`]
     /// - [`Level`]
+    #[doc = include_str!("../.github/formatting_codes.md")]
     pub fn format<'a>(&self, output: Output, level: Level, message: &'a str, mut extra_arguments: Vec<(&str, String)>) -> String {
         let mut arguments: Vec<(&str, String)> = vec![];
         let mut colors: Vec<(&str, String)> = vec![
@@ -262,7 +263,7 @@ impl Formatter {
         }.to_string());
 
         arguments.push(("message", message.to_string()));
-        arguments.push(("timestamp", chrono::Local::now().format(&self.timestamp_format).to_string()));
+        arguments.push(("timestamp", chrono::Utc::now().format(&self.timestamp_format).to_string()));
         arguments.append(&mut extra_arguments);
 
         let mut result: String = match output {
