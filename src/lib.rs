@@ -1,6 +1,6 @@
 #![doc = include_str!("../.github/README.md")]
-// Logging-rs.
-// Version: 1.0.0
+// Logging-rs
+// Version: 1.1.0
 
 // Copyright (c) 2023-present I Language Development.
 
@@ -62,25 +62,6 @@ pub enum Level {
 }
 
 
-//////////////////
-// HTTP METHODS //
-//////////////////
-
-// HTTP methods
-/*#[derive(Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum HTTPMethod {
-    /// GET request. The default value
-    #[default]
-    GET,
-    /// POST request
-    POST,
-    /// PUT request
-    PUT,
-    /// PATCH request
-    PATCH
-}*/
-
-
 /////////////////
 // OUTPUT TYPE //
 /////////////////
@@ -97,12 +78,7 @@ pub enum Output {
     FILE {
         /// File path
         path: String
-    },
-    // Web request (not currently implemented)
-    /*REQUEST {
-        method: HTTPMethod,
-        url: String
-    }*/
+    }
 }
 
 
@@ -217,7 +193,8 @@ impl Formatter {
     /// - [`Formatter`]
     /// - [`Output`]
     /// - [`Level`]
-    pub fn format<'a>(&self, output: Output, level: Level, message: &'a str, mut arguments: Vec<(&str, String)>) -> String {
+    pub fn format<'a>(&self, output: Output, level: Level, message: &'a str, mut extra_arguments: Vec<(&str, String)>) -> String {
+        let mut arguments: Vec<(&str, String)> = vec![];
         let mut colors: Vec<(&str, String)> = vec![
             // Formatting codes
             ("end", "\x1b[0m".to_string()),
@@ -286,6 +263,7 @@ impl Formatter {
 
         arguments.push(("message", message.to_string()));
         arguments.push(("timestamp", chrono::Local::now().format(&self.timestamp_format).to_string()));
+        arguments.append(&mut extra_arguments);
 
         let mut result: String = match output {
             Output::STDOUT | Output::STDERR => {
@@ -384,6 +362,7 @@ impl Logger {
     /// - `message`: The message to log
     /// - `level`: The log [`Level`] to use for logging
     /// - `path`: The path of the calling file
+    /// - `arguments`: A list of arguments to use when formatting the message
     ///
     /// # Returns
     ///
@@ -397,7 +376,8 @@ impl Logger {
     /// logger.log(
     ///     "Some message",
     ///     logging_rs::Level::default(),
-    ///     "src/lib.rs"
+    ///     "src/lib.rs",
+    ///     vec![]
     /// );
     /// ```
     ///
@@ -411,9 +391,10 @@ impl Logger {
     /// - [`log!()`]
     /// - [`Logger`]
     /// - [`Level`]
-    pub fn log(&self, message: &str, level: Level, path: &str) {
+    pub fn log(&self, message: &str, level: Level, path: &str, mut arguments: Vec<(&str, String)>) {
+        arguments.push(("path", path.to_string()));
         for writable in self.writable_list.clone() {
-            let formatted: String = self.formatter.format(writable.clone(), level, message, vec![("path", path.to_string())]);
+            let formatted: String = self.formatter.format(writable.clone(), level, message, arguments.clone());
 
             match writable {
                 Output::STDOUT => println!("{}", formatted),
@@ -429,16 +410,7 @@ impl Logger {
                     if let Err(error) = write {
                         errors::Error::new("Writing error", "The file could not be edited", 2).raise(format!("File: {}\nText: {}\nError: {}", path, formatted, error).as_str());
                     }
-                },
-                // TODO (ElBe): Add HTTP support
-                /*Output::REQUEST { ref method, ref url } => {
-                    match method {
-                        HTTPMethod::GET => {},
-                        HTTPMethod::POST => {},
-                        HTTPMethod::PUT => {},
-                        HTTPMethod::PATCH => {},
-                    }
-                }*/
+                }
             }
         }
     }
@@ -462,6 +434,7 @@ impl Logger {
 /// # use logging_rs;
 /// # let logger: logging_rs::Logger = logging_rs::Logger::default();
 /// logging_rs::debug!(logger, "A message");
+/// logging_rs::debug!(logger, "A message with more {{details}}", "details" = "stuff");
 /// ```
 ///
 /// # See also
@@ -476,7 +449,19 @@ impl Logger {
 macro_rules! debug {
     ($logger:expr, $message:expr) => {
         {
-            $logger.log($message, $crate::Level::DEBUG, std::panic::Location::caller().file());
+            $logger.log($message, $crate::Level::DEBUG, std::panic::Location::caller().file(), vec![]);
+        }
+    };
+
+    ($logger:expr, $message:expr, $($argument_name:literal = $argument_value:literal),* $(,)?) => {
+        {
+            let mut arguments: Vec<(&str, String)> = vec![];
+
+            $(
+                arguments.push(($argument_name, $argument_value.to_string()));
+            )*
+
+            $logger.log($message, $crate::Level::DEBUG, std::panic::Location::caller().file(), arguments);
         }
     };
 }
@@ -494,6 +479,7 @@ macro_rules! debug {
 /// # use logging_rs;
 /// # let logger: logging_rs::Logger = logging_rs::Logger::default();
 /// logging_rs::info!(logger, "A message");
+/// logging_rs::info!(logger, "A message with more {{details}}", "details" = "stuff");
 /// ```
 ///
 /// # See also
@@ -508,9 +494,21 @@ macro_rules! debug {
 macro_rules! info {
     ($logger:expr, $message:expr) => {
         {
-            $logger.log($message, $crate::Level::INFO, std::panic::Location::caller().file());
+            $logger.log($message, $crate::Level::INFO, std::panic::Location::caller().file(), vec![]);
         }
     };
+
+    ($logger:expr, $message:expr, $($argument_name:literal = $argument_value:literal),* $(,)?) => {
+        {
+            let mut arguments: Vec<(&str, String)> = vec![];
+
+            $(
+                arguments.push(($argument_name, $argument_value.to_string()));
+            )*
+
+            $logger.log($message, $crate::Level::INFO, std::panic::Location::caller().file(), arguments);
+        }
+    }
 }
 
 /// Logs the given message with logging level [`Level::WARN`].
@@ -526,6 +524,7 @@ macro_rules! info {
 /// # use logging_rs;
 /// # let logger: logging_rs::Logger = logging_rs::Logger::default();
 /// logging_rs::warn!(logger, "A message");
+/// logging_rs::warn!(logger, "A message with more {{details}}", "details" = "stuff");
 /// ```
 ///
 /// # See also
@@ -540,9 +539,21 @@ macro_rules! info {
 macro_rules! warn {
     ($logger:expr, $message:expr) => {
         {
-            $logger.log($message, $crate::Level::WARN, std::panic::Location::caller().file());
+            $logger.log($message, $crate::Level::WARN, std::panic::Location::caller().file(), vec![]);
         }
     };
+
+    ($logger:expr, $message:expr, $($argument_name:literal = $argument_value:literal),* $(,)?) => {
+        {
+            let mut arguments: Vec<(&str, String)> = vec![];
+
+            $(
+                arguments.push(($argument_name, $argument_value.to_string()));
+            )*
+
+            $logger.log($message, $crate::Level::WARN, std::panic::Location::caller().file(), arguments);
+        }
+    }
 }
 
 /// Logs the given message with logging level [`Level::ERROR`].
@@ -558,6 +569,7 @@ macro_rules! warn {
 /// # use logging_rs;
 /// # let logger: logging_rs::Logger = logging_rs::Logger::default();
 /// logging_rs::error!(logger, "A message");
+/// logging_rs::error!(logger, "A message with more {{details}}", "details" = "stuff");
 /// ```
 ///
 /// # See also
@@ -572,9 +584,21 @@ macro_rules! warn {
 macro_rules! error {
     ($logger:expr, $message:expr) => {
         {
-            $logger.log($message, $crate::Level::ERROR, std::panic::Location::caller().file());
+            $logger.log($message, $crate::Level::ERROR, std::panic::Location::caller().file(), vec![]);
         }
     };
+
+    ($logger:expr, $message:expr, $($argument_name:literal = $argument_value:literal),* $(,)?) => {
+        {
+            let mut arguments: Vec<(&str, String)> = vec![];
+
+            $(
+                arguments.push(($argument_name, $argument_value.to_string()));
+            )*
+
+            $logger.log($message, $crate::Level::ERROR, std::panic::Location::caller().file(), arguments);
+        }
+    }
 }
 
 /// Logs the given message with logging level [`Level::FATAL`].
@@ -590,6 +614,7 @@ macro_rules! error {
 /// # use logging_rs;
 /// # let logger: logging_rs::Logger = logging_rs::Logger::default();
 /// logging_rs::fatal!(logger, "A message");
+/// logging_rs::fatal!(logger, "A message with more {{details}}", "details" = "stuff");
 /// ```
 ///
 /// # See also
@@ -604,9 +629,21 @@ macro_rules! error {
 macro_rules! fatal {
     ($logger:expr, $message:expr) => {
         {
-            $logger.log($message, $crate::Level::FATAL, std::panic::Location::caller().file());
+            $logger.log($message, $crate::Level::FATAL, std::panic::Location::caller().file(), vec![]);
         }
     };
+
+    ($logger:expr, $message:expr, $($argument_name:literal = $argument_value:literal),* $(,)?) => {
+        {
+            let mut arguments: Vec<(&str, String)> = vec![];
+
+            $(
+                arguments.push(($argument_name, $argument_value.to_string()));
+            )*
+
+            $logger.log($message, $crate::Level::FATAL, std::panic::Location::caller().file(), arguments);
+        }
+    }
 }
 
 /// Logs the given message with logging level [`Level::MESSAGE`].
@@ -622,6 +659,7 @@ macro_rules! fatal {
 /// # use logging_rs;
 /// # let logger: logging_rs::Logger = logging_rs::Logger::default();
 /// logging_rs::log!(logger, "A message");
+/// logging_rs::log!(logger, "A message with more {{details}}", "details" = "stuff");
 /// ```
 ///
 /// # See also
@@ -636,7 +674,19 @@ macro_rules! fatal {
 macro_rules! log {
     ($logger:expr, $message:expr) => {
         {
-            $logger.log($message, $crate::Level::MESSAGE, std::panic::Location::caller().file());
+            $logger.log($message, $crate::Level::MESSAGE, std::panic::Location::caller().file(), vec![]);
         }
     };
+
+    ($logger:expr, $message:expr, $($argument_name:literal = $argument_value:literal),* $(,)?) => {
+        {
+            let mut arguments: Vec<(&str, String)> = vec![];
+
+            $(
+                arguments.push(($argument_name, $argument_value.to_string()));
+            )*
+
+            $logger.log($message, $crate::Level::MESSAGE, std::panic::Location::caller().file(), arguments);
+        }
+    }
 }

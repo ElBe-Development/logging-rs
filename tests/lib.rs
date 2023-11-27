@@ -1,5 +1,5 @@
 // logging-rs tests
-// Version: 1.0.0
+// Version: 1.1.0
 
 // Copyright (c) 2023-present ElBe Development.
 
@@ -27,6 +27,7 @@
 
 #[allow(unused_imports)]
 use chrono;
+#[allow(unused_imports)]
 use logging_rs;
 
 
