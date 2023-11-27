@@ -36,7 +36,7 @@ pub mod errors;
 use std;
 use std::io::Write;
 
-// use chrono;
+use chrono;
 
 
 ////////////////
@@ -208,7 +208,7 @@ impl Formatter {
     ///     logging_rs::Output::default(),
     ///     logging_rs::Level::default(),
     ///     "Some message with an {{argument}}",
-    ///     vec![("argument", "replaced value")]
+    ///     vec![("argument", "replaced value".to_string())]
     /// );
     /// ```
     ///
@@ -217,90 +217,75 @@ impl Formatter {
     /// - [`Formatter`]
     /// - [`Output`]
     /// - [`Level`]
-    pub fn format<'a>(&self, output: Output, level: Level, message: &'a str, mut arguments: Vec<(&str, &'a str)>) -> String {
-        // TODO (ElBe): Make timestamps work. None of chrono, time or humantime have the things I want
-        let timestamp: &str = "TIMESTAMP";
-
-        // let time = chrono::Utc::now();
-        //let _timestamp = time.format("%Y-%m-%d %H:%M:%S").to_string(); //chrono::format::DelayedFormat<chrono::format::StrftimeItems<'_>>
-        //let parsed = chrono::NaiveDateTime::parse_from_str(&_timestamp.to_string(), "%Y-%m-%d %H:%M:%S").expect("Bad");
-
-        //let borrowed = &_timestamp;
-
-        //println!("{}", _timestamp);
-        //println!("{}", parsed.to_string().as_str());
-
-        // arguments.push(("timestamp", &time.format("%Y-%m-%d %H:%M:%S").to_string()));
-
-        let mut colors: Vec<(&str, &str)> = vec![
+    pub fn format<'a>(&self, output: Output, level: Level, message: &'a str, mut arguments: Vec<(&str, String)>) -> String {
+        let mut colors: Vec<(&str, String)> = vec![
             // Formatting codes
-            ("end", "\x1b[0m"),
-            ("bold", "\x1b[1m"),
-            ("italic", "\x1b[3m"),
-            ("underline", "\x1b[4m"),
-            ("overline", "\x1b[53m"),
+            ("end", "\x1b[0m".to_string()),
+            ("bold", "\x1b[1m".to_string()),
+            ("italic", "\x1b[3m".to_string()),
+            ("underline", "\x1b[4m".to_string()),
+            ("overline", "\x1b[53m".to_string()),
 
             // Foreground colors
-            ("color.black", "\x1b[30m"),
-            ("color.red", "\x1b[31m"),
-            ("color.green", "\x1b[32m"),
-            ("color.yellow", "\x1b[33m"),
-            ("color.blue", "\x1b[34m"),
-            ("color.magenta", "\x1b[35m"),
-            ("color.cyan", "\x1b[36m"),
-            ("color.white", "\x1b[37m"),
+            ("color.black", "\x1b[30m".to_string()),
+            ("color.red", "\x1b[31m".to_string()),
+            ("color.green", "\x1b[32m".to_string()),
+            ("color.yellow", "\x1b[33m".to_string()),
+            ("color.blue", "\x1b[34m".to_string()),
+            ("color.magenta", "\x1b[35m".to_string()),
+            ("color.cyan", "\x1b[36m".to_string()),
+            ("color.white", "\x1b[37m".to_string()),
 
             // Bright foreground colors
-            ("color.bright_black", "\x1b[90m"),
-            ("color.bright_red", "\x1b[91m"),
-            ("color.bright_green", "\x1b[92m"),
-            ("color.bright_yellow", "\x1b[93m"),
-            ("color.bright_blue", "\x1b[94m"),
-            ("color.bright_magenta", "\x1b[95m"),
-            ("color.bright_cyan", "\x1b[96m"),
-            ("color.bright_white", "\x1b[97m"),
+            ("color.bright_black", "\x1b[90m".to_string()),
+            ("color.bright_red", "\x1b[91m".to_string()),
+            ("color.bright_green", "\x1b[92m".to_string()),
+            ("color.bright_yellow", "\x1b[93m".to_string()),
+            ("color.bright_blue", "\x1b[94m".to_string()),
+            ("color.bright_magenta", "\x1b[95m".to_string()),
+            ("color.bright_cyan", "\x1b[96m".to_string()),
+            ("color.bright_white", "\x1b[97m".to_string()),
 
             // Background colors
-            ("back.black", "\x1b[40m"),
-            ("back.red", "\x1b[41m"),
-            ("back.green", "\x1b[42m"),
-            ("back.yellow", "\x1b[43m"),
-            ("back.blue", "\x1b[44m"),
-            ("back.magenta", "\x1b[45m"),
-            ("back.cyan", "\x1b[46m"),
-            ("back.white", "\x1b[47m"),
+            ("back.black", "\x1b[40m".to_string()),
+            ("back.red", "\x1b[41m".to_string()),
+            ("back.green", "\x1b[42m".to_string()),
+            ("back.yellow", "\x1b[43m".to_string()),
+            ("back.blue", "\x1b[44m".to_string()),
+            ("back.magenta", "\x1b[45m".to_string()),
+            ("back.cyan", "\x1b[46m".to_string()),
+            ("back.white", "\x1b[47m".to_string()),
 
             // Bright background colors
-            ("back.bright_black", "\x1b[100m"),
-            ("back.bright_red", "\x1b[101m"),
-            ("back.bright_green", "\x1b[102m"),
-            ("back.bright_yellow", "\x1b[103m"),
-            ("back.bright_blue", "\x1b[104m"),
-            ("back.bright_magenta", "\x1b[105m"),
-            ("back.bright_cyan", "\x1b[106m"),
-            ("back.bright_white", "\x1b[107m"),
+            ("back.bright_black", "\x1b[100m".to_string()),
+            ("back.bright_red", "\x1b[101m".to_string()),
+            ("back.bright_green", "\x1b[102m".to_string()),
+            ("back.bright_yellow", "\x1b[103m".to_string()),
+            ("back.bright_blue", "\x1b[104m".to_string()),
+            ("back.bright_magenta", "\x1b[105m".to_string()),
+            ("back.bright_cyan", "\x1b[106m".to_string()),
+            ("back.bright_white", "\x1b[107m".to_string()),
         ];
 
-        let level_string: (&str, &str) = ("level", match level {
+        let level_string: (&str, String) = ("level", match level {
             Level::DEBUG => "DEBUG",
             Level::INFO => "INFO",
             Level::WARN => "WARNING",
             Level::ERROR => "ERROR",
             Level::FATAL => "FATAL",
             Level::MESSAGE => "MESSAGE"
-        });
-        let colored_level_string: (&str, &str) = ("level", match level {
+        }.to_string());
+        let colored_level_string: (&str, String) = ("level", match level {
             Level::DEBUG => "DEBUG",
             Level::INFO => "{{color.blue}}INFO{{end}}",
             Level::WARN => "{{color.yellow}}WARNING{{end}}",
             Level::ERROR => "{{color.red}}ERROR{{end}}",
             Level::FATAL => "{{color.red}}FATAL{{end}}",
             Level::MESSAGE => "{{color.blue}}MESSAGE{{end}}"
-        });
+        }.to_string());
 
-        arguments.push(("message", message));
-        arguments.push(("timestamp", timestamp));
-        //arguments.push(("timestamp", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string().to_owned().as_str()));
+        arguments.push(("message", message.to_string()));
+        arguments.push(("timestamp", chrono::Local::now().format(&self.timestamp_format).to_string()));
 
         let mut result: String = match output {
             Output::STDOUT | Output::STDERR => {
@@ -316,7 +301,7 @@ impl Formatter {
         arguments.append(&mut colors);
 
         for (key, value) in arguments {
-            result = result.replace(("{{".to_owned() + key + "}}").as_str(), value);
+            result = result.replace(("{{".to_owned() + key + "}}").as_str(), &value);
         }
 
         return result.clone();
@@ -428,7 +413,7 @@ impl Logger {
     /// - [`Level`]
     pub fn log(&self, message: &str, level: Level, path: &str) {
         for writable in self.writable_list.clone() {
-            let formatted: String = self.formatter.format(writable.clone(), level, message, vec![("path", path)]);
+            let formatted: String = self.formatter.format(writable.clone(), level, message, vec![("path", path.to_string())]);
 
             match writable {
                 Output::STDOUT => println!("{}", formatted),

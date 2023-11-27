@@ -26,6 +26,7 @@
 ////////////////////////////////
 
 #[allow(unused_imports)]
+use chrono;
 use logging_rs;
 
 
@@ -85,7 +86,7 @@ mod tests {
 
         assert_eq!(
             formatter.format(logging_rs::Output::default(), logging_rs::Level::default(), "Test", vec![]),
-            "[\x1b[94mTIMESTAMP\x1b[0m] [DEBUG] {{path}}: Test"
+            format!("[\x1b[94m{}\x1b[0m] [DEBUG] {{{{path}}}}: Test", chrono::Local::now().format(&logging_rs::Formatter::default().timestamp_format))
         );
     }
 
